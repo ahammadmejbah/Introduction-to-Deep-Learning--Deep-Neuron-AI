@@ -167,3 +167,110 @@ _(Source: Python Machine Learning, S. Raschka)_
 
 * We backpropagate the error, find its derivative with respect to each weight in the network, and update the model.
 
+### Our neural networks class
+
+When we first create a neural networks architecture, we need to know the number of inputs, number of hidden layers and number of outputs.The weights have to be randomly initialized.
+
+```python
+class MLP:
+    def __init__(self, ni, nh, no):
+        # number of input, hidden, and output nodes
+        self.ni = ni + 1 # +1 for bias node
+        self.nh = nh
+        self.no = no
+
+        # activations for nodes
+        self.ai = [1.0]*self.ni
+        self.ah = [1.0]*self.nh
+        self.ao = [1.0]*self.no
+        
+        # create weights
+        self.wi = makeMatrix(self.ni, self.nh)
+        self.wo = makeMatrix(self.nh, self.no)
+        
+        # set them to random vaules
+        self.wi = rand(-0.2, 0.2, size=self.wi.shape)
+        self.wo = rand(-2.0, 2.0, size=self.wo.shape)
+
+        # last change in weights for momentum   
+        self.ci = makeMatrix(self.ni, self.nh)
+        self.co = makeMatrix(self.nh, self.no)
+```
+
+### Activation Function
+
+```python
+def activate(self, inputs):
+        
+    if len(inputs) != self.ni-1:
+        print(inputs)
+        raise ValueError('wrong number of inputs')
+
+    # input activations
+    for i in range(self.ni-1):
+        self.ai[i] = inputs[i]
+
+    # hidden activations
+    for j in range(self.nh):
+        sum_h = 0.0
+        for i in range(self.ni):
+            sum_h += self.ai[i] * self.wi[i][j]
+        self.ah[j] = sigmoid(sum_h)
+
+    # output activations
+    for k in range(self.no):
+        sum_o = 0.0
+        for j in range(self.nh):
+            sum_o += self.ah[j] * self.wo[j][k]
+        self.ao[k] = sigmoid(sum_o)
+
+    return self.ao[:]
+```
+
+
+### BackPropagation
+
+
+```python
+def backPropagate(self, targets, N, M):
+        
+    if len(targets) != self.no:
+        print(targets)
+        raise ValueError('wrong number of target values')
+
+    # calculate error terms for output
+    output_deltas = np.zeros(self.no)
+    for k in range(self.no):
+        error = targets[k]-self.ao[k]
+        output_deltas[k] = dsigmoid(self.ao[k]) * error
+
+    # calculate error terms for hidden
+    hidden_deltas = np.zeros(self.nh)
+    for j in range(self.nh):
+        error = 0.0
+        for k in range(self.no):
+            error += output_deltas[k]*self.wo[j][k]
+        hidden_deltas[j] = dsigmoid(self.ah[j]) * error
+
+    # update output weights
+    for j in range(self.nh):
+        for k in range(self.no):
+            change = output_deltas[k] * self.ah[j]
+            self.wo[j][k] += N*change + 
+                             M*self.co[j][k]
+            self.co[j][k] = change
+
+    # update input weights
+    for i in range(self.ni):
+        for j in range(self.nh):
+            change = hidden_deltas[j]*self.ai[i]
+            self.wi[i][j] += N*change + 
+                             M*self.ci[i][j]
+            self.ci[i][j] = change
+
+    # calculate error
+    error = 0.0
+    for k in range(len(targets)):
+        error += 0.5*(targets[k]-self.ao[k])**2
+    return error
+```
